@@ -1,96 +1,100 @@
-import { ContactForm } from 'components/ContactForm';
-import { Filter } from 'components/Filter';
-import { ContactList } from 'components/ContactList';
+import { PixabayAPI } from 'pixabayApi/pixabay-api';
 import { Component } from 'react';
-import { nanoid } from 'nanoid';
+import { Searchbar } from './Searchbar';
+import { ImageGallery } from './ImageGallery';
+import { Loader } from './Loader';
+import { Button } from './Button';
+import { Modal } from './Modal';
+import { AppWrapper } from './App.styled';
+
+
+const pixabayApi = new PixabayAPI();
 
 export class App extends Component {
   state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
+    cards: [],
+    loading: false,
+    searchQuery: '',
+    showModal: false,
+    forModalLink: '',
   };
 
-  componentDidMount() {
-    const savedToLocalStorageContacts = JSON.parse(
-      localStorage.getItem('contacts')
-    );
+  async componentDidUpdate(_, prevState) {
+    if (prevState.searchQuery !== this.state.searchQuery) {
+      this.setState({ loading: true, cards: [] });
+      pixabayApi.page = 1;
+      pixabayApi.q = this.state.searchQuery;
 
-    if (savedToLocalStorageContacts) {
-      this.setState({ contacts: savedToLocalStorageContacts });
+      try {
+        const { data } = await pixabayApi.fetchPhotos();
+        if (data.total === 0) {
+          alert(
+            'Sorry, there are no images matching your search query. Please try again.'
+          );
+          return;
+        }
+
+        const newCards = data.hits;
+        console.log(newCards);
+
+        this.setState({
+          cards: newCards,
+        });
+      } catch (error) {
+        console.log(error);
+        alert('Something went wrong.');
+      } finally {
+        this.setState({ loading: false });
+      }
     }
   }
 
-  componentDidUpdate(_, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
-
-  createContact = ({ name, number }, resetForm) => {
-    const newContact = {
-      id: nanoid(),
-      name,
-      number,
-    };
-
-    const isExistContact = this.state.contacts.some(
-      contact => contact.name === name
-    );
-
-    if (isExistContact) {
-      alert(`${name} is already in contacts`);
-    } else {
-      resetForm();
-      this.setState(({ contacts }) => ({
-        contacts: [...contacts, newContact],
+  addPage = async () => {
+    this.setState({ loading: true });
+    pixabayApi.page += 1;
+    try {
+      const { data } = await pixabayApi.fetchPhotos();
+      const newCards = data.hits;
+      this.setState(({ cards }) => ({
+        cards: [...cards, ...newCards],
       }));
+    } catch (error) {
+      console.log(error);
+      alert('Something went wrong.');
+    } finally {
+      this.setState({ loading: false });
     }
   };
 
-  deleteContact = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(({ id }) => id !== contactId),
-    }));
-  };
-
-  changeFilter = e => {
+  showModal = link => {
     this.setState({
-      filter: e.currentTarget.value,
+      forModalLink: link,
     });
+    this.toggleModal();
   };
 
-  filteredContacts = () => {
-    const { contacts, filter } = this.state;
+  toggleModal = () => {
+    this.setState(({ showModal }) => ({ showModal: !showModal }));
+  };
 
-    const normalizedFilter = filter.toLowerCase();
-
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normalizedFilter)
-    );
+  handleFormSubmit = searchText => {
+    this.setState({ searchQuery: searchText });
   };
 
   render() {
-    const { filter } = this.state;
-
-    const filteredContacts = this.filteredContacts();
-
+    const { loading, cards, showModal, forModalLink } = this.state;
     return (
-      <>
-        <h1>Phonebook</h1>
-        <ContactForm onSubmit={this.createContact} />
-
-        <h2>Contacts</h2>
-        <Filter filter={filter} changeFilter={this.changeFilter} />
-        <ContactList
-          contactList={filteredContacts}
-          deleteContact={this.deleteContact}
-        />
-      </>
+      <AppWrapper>
+        <Searchbar onSubmit={this.handleFormSubmit} />
+        <ImageGallery imagesArray={cards} showModal={this.showModal} />
+        {loading && <Loader />}
+        {cards.length !== 0 && <Button handleClick={this.addPage}></Button>}
+        {showModal && (
+          <Modal handleClose={this.toggleModal}>
+            <img src={forModalLink} alt="" />
+          </Modal>
+        )}
+      </AppWrapper>
     );
   }
 }

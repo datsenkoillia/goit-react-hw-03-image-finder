@@ -1,14 +1,14 @@
-const BASE_URL = 'https://pixabay.com/api/';
-const API_KEY = '34744066-258cb09888b79ff1454a5a6f0';
-
 import axios from 'axios';
+
+// const BASE_URL = 'https://pixabay.com/api/';
+// const API_KEY = '34744066-258cb09888b79ff1454a5a6f0';
 
 export class PixabayAPI {
   #BASE_URL = 'https://pixabay.com/api/';
   #API_KEY = '34744066-258cb09888b79ff1454a5a6f0';
 
   page = 1;
-  per_page = 40;
+  per_page = 12;
   q = null;
 
   async fetchPhotos() {
@@ -29,5 +29,3 @@ export class PixabayAPI {
     }
   }
 }
-
-
