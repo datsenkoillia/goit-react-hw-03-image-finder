@@ -7,7 +7,6 @@ import { Button } from './Button';
 import { Modal } from './Modal';
 import { AppWrapper } from './App.styled';
 
-
 const pixabayApi = new PixabayAPI();
 
 export class App extends Component {
@@ -35,7 +34,6 @@ export class App extends Component {
         }
 
         const newCards = data.hits;
-        console.log(newCards);
 
         this.setState({
           cards: newCards,
