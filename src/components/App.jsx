@@ -14,6 +14,7 @@ export class App extends Component {
     cards: [],
     loading: false,
     searchQuery: '',
+    page: 1,
     showModal: false,
     forModalLink: '',
   };
@@ -21,7 +22,7 @@ export class App extends Component {
   async componentDidUpdate(_, prevState) {
     if (prevState.searchQuery !== this.state.searchQuery) {
       this.setState({ loading: true, cards: [] });
-      pixabayApi.page = 1;
+      pixabayApi.page = this.state.page;
       pixabayApi.q = this.state.searchQuery;
 
       try {
@@ -44,24 +45,31 @@ export class App extends Component {
       } finally {
         this.setState({ loading: false });
       }
+      return;
+    }
+
+    if (prevState.page !== this.state.page) {
+      this.setState({ loading: true });
+      pixabayApi.page = this.state.page;
+      try {
+        const { data } = await pixabayApi.fetchPhotos();
+        const newCards = data.hits;
+        this.setState(({ cards }) => ({
+          cards: [...cards, ...newCards],
+        }));
+      } catch (error) {
+        console.log(error);
+        alert('Something went wrong.');
+      } finally {
+        this.setState({ loading: false });
+      }
     }
   }
 
-  addPage = async () => {
-    this.setState({ loading: true });
-    pixabayApi.page += 1;
-    try {
-      const { data } = await pixabayApi.fetchPhotos();
-      const newCards = data.hits;
-      this.setState(({ cards }) => ({
-        cards: [...cards, ...newCards],
-      }));
-    } catch (error) {
-      console.log(error);
-      alert('Something went wrong.');
-    } finally {
-      this.setState({ loading: false });
-    }
+  addPage = () => {
+    this.setState(({ page }) => ({
+      page: (page += 1),
+    }));
   };
 
   showModal = link => {
@@ -76,7 +84,7 @@ export class App extends Component {
   };
 
   handleFormSubmit = searchText => {
-    this.setState({ searchQuery: searchText });
+    this.setState({ searchQuery: searchText, page: 1 });
   };
 
   render() {
@@ -84,9 +92,13 @@ export class App extends Component {
     return (
       <AppWrapper>
         <Searchbar onSubmit={this.handleFormSubmit} />
-        <ImageGallery imagesArray={cards} showModal={this.showModal} />
+        {cards.length !== 0 && (
+          <ImageGallery imagesArray={cards} showModal={this.showModal} />
+        )}
         {loading && <Loader />}
-        {cards.length !== 0 && <Button handleClick={this.addPage}></Button>}
+        {cards.length !== 0 && !loading && (
+          <Button handleClick={this.addPage}></Button>
+        )}
         {showModal && (
           <Modal handleClose={this.toggleModal}>
             <img src={forModalLink} alt="" />
