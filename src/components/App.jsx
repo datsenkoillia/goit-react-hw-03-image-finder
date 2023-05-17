@@ -67,8 +67,8 @@ export class App extends Component {
   }
 
   addPage = () => {
-    this.setState(({ page }) => ({
-      page: (page += 1),
+    this.setState(prevState => ({
+      page: prevState.page + 1,
     }));
   };
 
